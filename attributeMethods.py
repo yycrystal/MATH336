@@ -1,9 +1,10 @@
 class treeNode:
-    def __init__(self,attribute=None,value=None,gini=None,data=None,parent=None,depth=None):
+    def __init__(self,attribute=None,value=None,gini=None,xData=None,yData=None,parent=None,depth=None):
         self.__attribute = attribute
         self.__value = value
         self.__gini = gini
-        self.__dataPoints = data
+        self.__dataPoints = xData
+        self.__labels = yData
         self.__parent = parent
         self.__leftChild = None
         self.__rightChild = None
@@ -28,7 +29,7 @@ class treeNode:
         return self.__value
 
     def getData(self):
-        return self.__dataPoints
+        return (self.__dataPoints,self.__labels)
 
     def getIndex(self):
         return self.__index
@@ -78,36 +79,3 @@ class myQueue:
     
     def isEmpty(self):
         return(len(self.__arr)==0)
-
-def getID(entry):
-    return(entry[0])
-
-def getRI(entry):
-    return(entry[1])
-
-def getNa(entry):
-    return(entry[2])
-
-def getMg(entry):
-    return(entry[3])
-
-def getAl(entry):
-    return(entry[4])
-
-def getSi(entry):
-    return(entry[5])
-
-def getK(entry):
-    return(entry[6])
-
-def getCa(entry):
-    return(entry[7])
-
-def getBa(entry):
-    return(entry[8])
-
-def getFe(entry):
-    return(entry[9])
-
-def getType(entry):
-    return(entry[10])
