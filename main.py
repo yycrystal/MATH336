@@ -24,6 +24,7 @@ ATTRIBUTES = ["ID","Diagnosis",
               "symmetryMean","symmetrySE","symmetryWorst",
               "fractalMean","fractalSE","fractalWorst"]         #Attribute names
 np.random.seed(39217531)                                        #Set seed to student ID
+MAX_DEPTH = 2                                                   #Maximum depth of decision tree
 
 #Load in cancer dataset from CSV into np array
 #4-byte floating point for real numbers: around 6-7 decimal places, sufficient for our demonstration
@@ -62,8 +63,6 @@ b_test = np.count_nonzero(Y_test == 0)
 print(" - Of which malignant:", m_test)
 print(" - Of which benign:", b_test)
 print("M/B ratio in testing data: %.2f" % (m_test / b_test if b_test > 0 else float('inf')))
-
-MAX_DEPTH = 5              #Maximum depth of decision tree
 
 #Return array of possible thresholds using mean, median, some intervals SD away from mean for category
 def possibleThreshold(xVals):
@@ -182,7 +181,6 @@ def constructDT(xTrain,yTrain):
         depth = current.getDepth()
         threshold = bestAttribute(xData,yData)                  #Compute its best threshold and attribute
 
-        print(threshold)
         if (threshold is None):                                 #No suitable threhold found (i.e. high purity), make leaf
             current.setAttribute("LEAF")
             current.setValue(np.argmax(countTypes(yData)))
@@ -197,7 +195,6 @@ def constructDT(xTrain,yTrain):
             current.setValue(threshold[1])
             current.setGini(threshold[2])
             lowerX,lowerY,upperX,upperY = splitDatabyThreshold(xData,yData,threshold[0],threshold[1])
-            print(countTypes(lowerY),countTypes(upperY))
             leftChild = AM.treeNode(xData=lowerX,yData=lowerY,parent=current,depth=depth+1)         
             rightChild = AM.treeNode(xData=upperX,yData=upperY,parent=current,depth=depth+1)
             tree.append(leftChild)                              #And add its left and right child to queue
@@ -225,35 +222,53 @@ def estimateDT(xTest,tree):
     return estimate
 
 def printTree(tree):
+    print("\nNode details:")
     for node in tree:
         if node.getAttribute() == "LEAF":
             counts = countTypes(node.getData()[1])
-            print("Node %d: LEAF, Class %d, Parent %d, B Count %d, M Count %d" % (tree.index(node), node.getValue(), tree.index(node.getParent()) if node.getParent() is not None else -1, counts[0], counts[1]))
+            print("Node %d: LEAF, Depth %d, Class %d, Parent %d, B Count %d, M Count %d" % (tree.index(node), node.getDepth(), node.getValue(), tree.index(node.getParent()) if node.getParent() is not None else -1, counts[0], counts[1]))
         else:
             threshold = node.getThreshold()
             if threshold is not None:
-                print("Node %d: Attribute %s, Threshold %.2f, Gini %.4f, Parent %d" % (tree.index(node), node.getAttribute(), threshold, node.getGini(), tree.index(node.getParent()) if node.getParent() is not None else -1))
+                print("Node %d: Attribute %s, Depth %d, Threshold %.2f, Gini %.4f, Parent %d" % (tree.index(node), node.getAttribute(), node.getDepth(), threshold, node.getGini(), tree.index(node.getParent()) if node.getParent() is not None else -1))
             else:
-                print("Node %d: Attribute %s, Threshold None, Gini %s, Parent %d" % (tree.index(node), node.getAttribute(), node.getGini(), tree.index(node.getParent()) if node.getParent() is not None else -1))
+                print("Node %d: Attribute %s, Depth %d, Threshold None, Gini %s, Parent %d" % (tree.index(node), node.getAttribute(), node.getDepth(), node.getGini(), tree.index(node.getParent()) if node.getParent() is not None else -1))
 
 trainStart = time.time()
 tree = constructDT(X_train,Y_train)
 trainStop = time.time()
-correct = 0
-DTpredictedValues = []
 
-startTime = time.time()
+#Calculate training accuracy
+train_correct = 0
+trainPredictedValues = []
+for i in range(0,len(X_train)):
+    est = estimateDT(X_train[i],tree)
+    trainPredictedValues.append(est)
+    if (int(est) == int(Y_train[i])):
+        train_correct += 1
+train_accuracy = np.round(100*train_correct/len(X_train),2)
+
+#Calculate test accuracy
+test_correct = 0
+DTpredictedValues = []
+testStart = time.time()
 for i in range(0,len(X_test)):
     est = estimateDT(X_test[i],tree)
     #print("Predicted: %d, Actual: %d" % (est, Y_test[i]))
     DTpredictedValues.append(est)
     if (int(est) == int(Y_test[i])):
-        correct += 1
-accuracy = np.round(100*correct/len(X_test),2)
-endTime = time.time()
+        test_correct += 1
+test_accuracy = np.round(100*test_correct/len(X_test),2)
+testEnd = time.time()
 
-print("Accuracy: %.2f%%" % accuracy)
+print("\nTraining Accuracy: %.2f%%" % train_accuracy)
+print("Testing Accuracy: %.2f%%" % test_accuracy)
 print("Training time: %.2f seconds" % (trainStop - trainStart))
-print("Testing time: %.2f seconds" % (endTime - startTime))
+print("Testing time: %.2f seconds" % (testEnd - testStart))
+
+cM = confusion_matrix(Y_test, DTpredictedValues,labels=[0,1])
+disp = ConfusionMatrixDisplay(confusion_matrix=cM,display_labels=["Benign","Malignant"])
+disp.plot()
+plt.show()
 
 printTree(tree)
